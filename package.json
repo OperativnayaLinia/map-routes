@@ -1,12 +1,11 @@
 {
   "name": "my-map-app",
   "version": "1.0.0",
-  "description": "Map app with routes",
-  "main": "server/server.js",
+  "private": true,
   "scripts": {
     "start": "node server/server.js"
   },
   "dependencies": {
-    "express": "^4.17.1"
+    "express": "^4.18.2"
   }
 }

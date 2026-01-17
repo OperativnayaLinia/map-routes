@@ -1,12 +1,15 @@
 const express = require('express');
+const path = require('path');
+
 const app = express();
 
-// Роут для главной страницы
+// раздаём статику
+app.use(express.static(path.join(__dirname, '../public')));
+
 app.get('/', (req, res) => {
-  res.send('Сервер работает 🚀');
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// ВАЖНО: используем процесс.env.PORT для Railway
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Сервер запущен на порту ${PORT}`);
