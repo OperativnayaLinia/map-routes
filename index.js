@@ -1,52 +1,83 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const ADMIN_PASSWORD = 'Bel_admin31';
-
+/* 🔴 КРИТИЧНО: без этого пароль НИКОГДА не будет читаться */
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
-let routes = [];
+/* Раздача фронта */
+app.use(express.static('public'));
+
+/* ===== ХРАНЕНИЕ МАРШРУТОВ ===== */
+const DATA_FILE = path.join(__dirname, 'routes.json');
+
+function loadRoutes() {
+  if (!fs.existsSync(DATA_FILE)) return [];
+  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+}
+
+function saveRoutes(routes) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(routes, null, 2));
+}
+
+/* ===== ADMIN AUTH ===== */
+const ADMIN_PASSWORD = 'Bel_admin31';
 const adminTokens = new Set();
 
-function token() {
-  return crypto.randomBytes(32).toString('hex');
+/* 🔐 LOGIN */
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body || {};
+
+  console.log('LOGIN BODY:', req.body); // можно оставить, не мешает
+
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'wrong password' });
+  }
+
+  const token = 'admin-' + Date.now();
+  adminTokens.add(token);
+
+  res.json({ token });
+});
+
+/* 🔐 ПРОВЕРКА ТОКЕНА */
+function isAdmin(req) {
+  const token = req.headers['authorization'];
+  return adminTokens.has(token);
 }
 
-app.post('/api/admin/login', (req,res)=>{
-  if(req.body.password!==ADMIN_PASSWORD)
-    return res.status(401).json({error:'bad'});
-  const t=token();
-  adminTokens.add(t);
-  res.json({token:t});
+/* ===== API ===== */
+
+/* Получить маршруты */
+app.get('/api/routes', (req, res) => {
+  res.json(loadRoutes());
 });
 
-function admin(req,res,next){
-  if(!adminTokens.has(req.headers['x-admin-token']))
-    return res.status(403).end();
-  next();
-}
+/* Сохранить маршруты (только админ) */
+app.post('/api/routes', (req, res) => {
+  if (!isAdmin(req)) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
 
-app.get('/api/routes',(req,res)=>res.json(routes));
-
-app.post('/api/routes',admin,(req,res)=>{
-  const r={id:crypto.randomUUID(),path:req.body.path};
-  routes.push(r);
-  res.json(r);
+  const routes = req.body;
+  saveRoutes(routes);
+  res.json({ ok: true });
 });
 
-app.put('/api/routes/:id',admin,(req,res)=>{
-  routes=routes.map(r=>r.id===req.params.id?{...r,path:req.body.path}:r);
-  res.json({ok:true});
+/* Сброс маршрутов (только админ) */
+app.delete('/api/routes', (req, res) => {
+  if (!isAdmin(req)) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+
+  saveRoutes([]);
+  res.json({ ok: true });
 });
 
-app.delete('/api/routes/:id',admin,(req,res)=>{
-  routes=routes.filter(r=>r.id!==req.params.id);
-  res.json({ok:true});
+/* ===== START ===== */
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-
-app.listen(PORT,()=>console.log('OK',PORT));
