@@ -1,6 +1,36 @@
-const API_URL = "https://ТВОЙ-ПРОЕКТ.up.railway.app";
+// ===== НАСТРОЙКИ =====
+const API_URL = "https://otslezhivanie-marshruta.onrender.com";
 
-// Загружаем маршруты с сервера
+// ===== ЛОГИН АДМИНА =====
+async function adminLogin(password) {
+  const res = await fetch(`${API_URL}/api/admin/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ password })
+  });
+
+  if (!res.ok) {
+    alert("Неверный пароль");
+    return;
+  }
+
+  const data = await res.json();
+
+  if (data.ok) {
+    sessionStorage.setItem("admin", "true");
+    alert("Админ-доступ включён");
+  }
+}
+
+// Кнопка логина
+function login() {
+  const pass = document.getElementById("adminPass").value;
+  adminLogin(pass);
+}
+
+// ===== ЗАГРУЗКА МАРШРУТОВ =====
 async function loadRoutes() {
   const res = await fetch(`${API_URL}/routes`);
   const data = await res.json();
@@ -13,16 +43,15 @@ async function loadRoutes() {
   });
 }
 
-// Сохраняем маршруты на сервере
+// ===== СОХРАНЕНИЕ МАРШРУТОВ =====
 async function saveRoutes() {
-  const token = sessionStorage.getItem("admin_token");
+  if (sessionStorage.getItem("admin") !== "true") return;
 
   const res = await fetch(`${API_URL}/routes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      token: token,
-      newRoute: activeRoute,
+      newRoute: activeRoute
     }),
   });
 
@@ -31,7 +60,7 @@ async function saveRoutes() {
   }
 }
 
-// Логика добавления маршрутов (аналогично тому, что ты писал раньше)
+// ===== ЛОГИКА КАРТЫ =====
 map.on("click", async (e) => {
   if (sessionStorage.getItem("admin") !== "true") return;
   if (!currentMode) return;
@@ -45,12 +74,12 @@ map.on("click", async (e) => {
     routes.push(route);
     activeRoute = route;
     attachMarkerEvents(marker);
-    await saveRoutes(); // Отправляем маршрут на сервер
+    await saveRoutes();
   }
 
   if (currentMode === "edit" && activeRoute) {
     activeRoute.path.push(p);
     activeRoute.polyline.setLatLngs(activeRoute.path);
-    await saveRoutes(); // Отправляем обновление на сервер
+    await saveRoutes();
   }
 });
