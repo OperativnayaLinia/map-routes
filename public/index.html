@@ -3,79 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <title>Маршруты</title>
-<meta name="viewport" content="width=device-width">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
-html,body{
-  height:100%;
-  margin:0;
-  font-family:Segoe UI,Roboto,sans-serif;
-}
-#map{position:absolute;inset:0}
-
-/* панель */
-.controls{
-  position:absolute;
-  top:10px;
-  left:10px;
-  z-index:1000;
-  display:none;
-  gap:6px;
-  flex-wrap:wrap;
-}
-.controls button{
-  padding:8px 12px;
-  border:none;
-  border-radius:8px;
-  background:#0078ff;
-  color:#fff;
-  font-weight:600;
-  cursor:pointer;
-}
-.controls button.active{background:#ff9800}
-
-/* вход */
-.admin-login{
-  position:absolute;
-  top:10px;
-  right:10px;
-  z-index:1000;
-}
-.admin-login button{
-  padding:6px 12px;
-  border-radius:8px;
-  border:none;
-  background:#222;
-  color:#fff;
-  cursor:pointer;
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Arial, sans-serif;
 }
 
-/* точка */
-.dot{
-  width:14px;
-  height:14px;
-  background:#ff0000;
-  border-radius:50%;
-  box-shadow:0 0 6px rgba(255,0,0,.9);
+#map {
+  position: absolute;
+  inset: 0;
 }
 
-/* подпись */
-.credit{
-  position:absolute;
-  bottom:6px;
-  left:50%;
-  transform:translateX(-50%);
-  background:rgba(0,0,0,.65);
-  color:#fff;
-  padding:4px 10px;
-  border-radius:6px;
-  font-size:13px;
-  z-index:1000;
+/* панель кнопок */
+.controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  display: none;
+  gap: 6px;
+  flex-wrap: wrap;
 }
-.credit a{color:#00b7ff;text-decoration:none}
+
+.controls button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #0078ff;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.controls button.active {
+  background: #ff9800;
+}
+
+/* вход администратора */
+.admin-login {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+}
+
+.admin-login button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #222;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* точка маршрута */
+.dot {
+  width: 14px;
+  height: 14px;
+  background: red;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(255,0,0,0.9);
+}
 </style>
 </head>
 
@@ -88,37 +82,28 @@ html,body{
 </div>
 
 <div class="controls" id="controls">
-  <button id="start">Старт</button>
-  <button id="pause">Пауза</button>
-  <button id="reset">Сброс</button>
+  <button id="start">▶ Старт</button>
+  <button id="pause">⏸ Пауза</button>
   <button id="addPointBtn">➕ Точка</button>
-  <button id="editRouteBtn">✏️ Маршрут</button>
   <button id="deleteRouteBtn">🗑 Удалить</button>
-</div>
-
-<div class="credit">
-  Программа от телеграмм канала
-  <a href="https://t.me/Bel_linia_31" target="_blank">
-    Белгородская Оперативная линия
-  </a>
 </div>
 
 <script>
 let adminToken = null;
 
-/* ===== АВТОРИЗАЦИЯ ===== */
+/* ===== ЛОГИН ===== */
 loginBtn.onclick = () => {
-  const p = prompt("Введите пароль администратора:");
-  if(!p) return;
+  const p = prompt("Пароль администратора:");
+  if (!p) return;
 
-  fetch('/api/admin/login',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({password:p})
+  fetch('/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: p })
   })
-  .then(r=>r.ok && r.json())
-  .then(d=>{
-    if(d){
+  .then(r => r.ok && r.json())
+  .then(d => {
+    if (d) {
       adminToken = d.token || "ok";
       controls.style.display = "flex";
       loginBtn.style.display = "none";
@@ -127,200 +112,143 @@ loginBtn.onclick = () => {
 };
 
 /* ===== КАРТА ===== */
-const map = L.map("map",{attributionControl:false})
-  .setView([50.5954,36.5873],9);
+const map = L.map('map').setView([50.5954, 36.5873], 9);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: ''
+}).addTo(map);
 
-/* ===== ИКОНКА ТОЧКИ ===== */
+/* ===== ИКОНКА ТОЧКИ (КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ) ===== */
 const pointIcon = L.divIcon({
-  html:'<div class="dot"></div>',
-  className:'',
-  iconSize:[14,14],
-  iconAnchor:[7,7]
+  html: '<div class="dot"></div>',
+  className: '',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7]
 });
 
 /* ===== ДАННЫЕ ===== */
 let routes = [];
 let activeRoute = null;
 let isRunning = false;
-let animationFrame = null;
 let addPointMode = false;
-let editRouteMode = false;
 let deleteRouteMode = false;
 const speed = 0.0004;
 
-/* ===== ЗАГРУЗКА ===== */
-function loadRoutes(){
-  fetch('/api/routes')
-    .then(r=>r.json())
-    .then(data=>{
-      clearMap();
-      data.forEach(r=>{
-        const polyline = L.polyline(r.path,{color:"blue"}).addTo(map);
-        const marker = L.marker(r.path[0],{icon:pointIcon}).addTo(map);
-        attachMarkerEvents(marker);
-        routes.push({id:r.id,path:r.path,polyline,marker,progress:0});
-      });
-    });
-}
-loadRoutes();
-
-/* ===== ОЧИСТКА ===== */
-function clearMap(){
-  routes.forEach(r=>{
-    map.removeLayer(r.marker);
-    map.removeLayer(r.polyline);
-  });
-  routes=[];
-  activeRoute=null;
-}
-
 /* ===== КЛИК ПО КАРТЕ ===== */
-map.on("click",e=>{
-  if(!adminToken) return;
-  if(!addPointMode && !editRouteMode && !e.originalEvent.ctrlKey) return;
+map.on('click', e => {
+  if (!adminToken || !addPointMode) return;
 
-  const point=[e.latlng.lat,e.latlng.lng];
+  const point = [e.latlng.lat, e.latlng.lng];
 
-  if(e.originalEvent.ctrlKey || addPointMode) activeRoute=null;
-  if(editRouteMode && !activeRoute) return;
+  if (!activeRoute) {
+    const polyline = L.polyline([point], { color: 'blue' }).addTo(map);
+    const marker = L.marker(point, { icon: pointIcon }).addTo(map);
+    attachMarkerEvents(marker);
 
-  if(activeRoute){
+    activeRoute = {
+      path: [point],
+      polyline,
+      marker,
+      progress: 0
+    };
+
+    routes.push(activeRoute);
+  } else {
     activeRoute.path.push(point);
     activeRoute.polyline.setLatLngs(activeRoute.path);
-  }else{
-    const polyline=L.polyline([point],{color:"blue"}).addTo(map);
-    const marker=L.marker(point,{icon:pointIcon}).addTo(map);
-    const route={path:[point],polyline,marker,progress:0};
-    routes.push(route);
-    activeRoute=route;
-    attachMarkerEvents(marker);
-  }
-
-  if(addPointMode){
-    addPointMode=false;
-    addPointBtn.classList.remove("active");
   }
 });
 
-/* ===== МАРКЕР ===== */
-function attachMarkerEvents(marker){
+/* ===== СОБЫТИЯ МАРКЕРА ===== */
+function attachMarkerEvents(marker) {
 
-  marker.on("click",()=>{
-    if(!adminToken) return;
-    activeRoute = routes.find(r=>r.marker===marker);
+  marker.on('click', () => {
+    if (!adminToken) return;
+    activeRoute = routes.find(r => r.marker === marker);
 
-    if(deleteRouteMode && activeRoute){
-      if(confirm("Удалить маршрут?")){
+    if (deleteRouteMode && activeRoute) {
+      if (confirm('Удалить маршрут?')) {
         deleteRoute(activeRoute);
       }
-      deleteRouteMode=false;
-      deleteRouteBtn.classList.remove("active");
+      deleteRouteMode = false;
+      deleteRouteBtn.classList.remove('active');
     }
   });
 
-  marker.on("contextmenu",()=>{
-    if(!adminToken) return;
-    const route=routes.find(r=>r.marker===marker);
-    if(route && confirm("Удалить маршрут?")){
+  marker.on('contextmenu', () => {
+    if (!adminToken) return;
+    const route = routes.find(r => r.marker === marker);
+    if (route && confirm('Удалить маршрут?')) {
       deleteRoute(route);
     }
   });
 
-  let hold=null;
-  marker.on("touchstart",()=>{
-    hold=setTimeout(()=>{
-      const route=routes.find(r=>r.marker===marker);
-      if(route && confirm("Удалить маршрут?")){
+  let holdTimer = null;
+  marker.on('touchstart', () => {
+    holdTimer = setTimeout(() => {
+      const route = routes.find(r => r.marker === marker);
+      if (route && confirm('Удалить маршрут?')) {
         deleteRoute(route);
       }
-    },800);
+    }, 800);
   });
-  marker.on("touchend",()=>clearTimeout(hold));
+  marker.on('touchend', () => clearTimeout(holdTimer));
 }
 
 /* ===== УДАЛЕНИЕ ===== */
-function deleteRoute(route){
+function deleteRoute(route) {
   map.removeLayer(route.marker);
   map.removeLayer(route.polyline);
-  routes=routes.filter(r=>r!==route);
-
-  if(route.id){
-    fetch('/api/routes/'+route.id,{
-      method:'DELETE',
-      headers:{'x-admin-token':adminToken}
-    });
-  }
-  activeRoute=null;
+  routes = routes.filter(r => r !== route);
+  activeRoute = null;
 }
 
 /* ===== АНИМАЦИЯ ===== */
-function animate(){
-  if(!isRunning) return;
+function animate() {
+  if (!isRunning) return;
 
-  routes.forEach(r=>{
-    if(r.path.length<2) return;
-    const i=Math.floor(r.progress);
-    const t=r.progress-i;
-    if(i>=r.path.length-1) r.progress=0;
+  routes.forEach(r => {
+    if (r.path.length < 2) return;
 
-    const a=r.path[i];
-    const b=r.path[(i+1)%r.path.length];
+    const i = Math.floor(r.progress);
+    const t = r.progress - i;
+    if (i >= r.path.length - 1) r.progress = 0;
+
+    const a = r.path[i];
+    const b = r.path[i + 1];
 
     r.marker.setLatLng([
-      a[0]+(b[0]-a[0])*t,
-      a[1]+(b[1]-a[1])*t
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t
     ]);
 
-    r.progress+=speed;
+    r.progress += speed;
   });
 
-  animationFrame=requestAnimationFrame(animate);
+  requestAnimationFrame(animate);
 }
 
 /* ===== КНОПКИ ===== */
-start.onclick=()=>{isRunning=true;routes.forEach(r=>r.progress=0);animate();};
-pause.onclick=()=>{isRunning=false;cancelAnimationFrame(animationFrame);};
-
-reset.onclick=()=>{
-  if(!confirm("Удалить все маршруты?")) return;
-  routes.forEach(r=>{
-    if(r.id){
-      fetch('/api/routes/'+r.id,{
-        method:'DELETE',
-        headers:{'x-admin-token':adminToken}
-      });
-    }
-  });
-  clearMap();
+start.onclick = () => {
+  isRunning = true;
+  routes.forEach(r => r.progress = 0);
+  animate();
 };
 
-addPointBtn.onclick=()=>{
-  addPointMode=!addPointMode;
-  editRouteMode=false;
-  deleteRouteMode=false;
-  addPointBtn.classList.toggle("active",addPointMode);
-  editRouteBtn.classList.remove("active");
-  deleteRouteBtn.classList.remove("active");
+pause.onclick = () => isRunning = false;
+
+addPointBtn.onclick = () => {
+  addPointMode = !addPointMode;
+  deleteRouteMode = false;
+  addPointBtn.classList.toggle('active', addPointMode);
+  deleteRouteBtn.classList.remove('active');
 };
 
-editRouteBtn.onclick=()=>{
-  editRouteMode=!editRouteMode;
-  addPointMode=false;
-  deleteRouteMode=false;
-  editRouteBtn.classList.toggle("active",editRouteMode);
-  addPointBtn.classList.remove("active");
-  deleteRouteBtn.classList.remove("active");
-};
-
-deleteRouteBtn.onclick=()=>{
-  deleteRouteMode=!deleteRouteMode;
-  addPointMode=false;
-  editRouteMode=false;
-  deleteRouteBtn.classList.toggle("active",deleteRouteMode);
-  addPointBtn.classList.remove("active");
-  editRouteBtn.classList.remove("active");
+deleteRouteBtn.onclick = () => {
+  deleteRouteMode = !deleteRouteMode;
+  addPointMode = false;
+  deleteRouteBtn.classList.toggle('active', deleteRouteMode);
+  addPointBtn.classList.remove('active');
 };
 </script>
 
